@@ -1,0 +1,18 @@
+{
+  "id": "c64boot",
+  "name": "C64 Boot Clock",
+  "version": "0.01",
+  "author": "zataoa",
+  "description": "A Commodore 64 power-on screen as a watch face. The time is typed at the READY prompt with a block cursor after it. The \"bytes free\" line does double duty and can show battery or steps instead. Redraws once a minute; the blinking cursor is optional and off by default.",
+  "icon": "app.png",
+  "type": "clock",
+  "tags": "clock",
+  "supports": ["BANGLEJS2"],
+  "allow_emulator": true,
+  "storage": [
+    {"name":"c64boot.app.js","url":"app.js"},
+    {"name":"c64boot.img","url":"app-icon.js","evaluate":true},
+    {"name":"c64boot.settings.js","url":"settings.js"}
+  ],
+  "data": [{"name":"c64boot.json"}]
+}
