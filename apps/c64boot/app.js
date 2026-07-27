@@ -100,12 +100,24 @@
   }
 
   function startBlink() {
-    if (!s.blink) return;
+    if (!s.blink || Bangle.isLocked() || blinkTimer) return;
     blinkTimer = setInterval(() => {
       cursorOn = !cursorOn;
       drawCursor();
     }, 1000);
   }
+
+  function stopBlink() {
+    if (!blinkTimer) return;
+    clearInterval(blinkTimer);
+    blinkTimer = undefined;
+    cursorOn = true;   // leave the cursor solid rather than stuck mid-blink-off
+    drawCursor();
+  }
+
+  // Only animate while unlocked - no point blinking a screen behind the lock.
+  function onLock(locked) { if (locked) stopBlink(); else startBlink(); }
+  Bangle.on('lock', onLock);
 
   // Repaint on wake - the screen may have been powered down mid-minute.
   function onLcd(on) { if (on) { drawChrome(); drawTime(); } }
@@ -123,8 +135,9 @@
     mode: "clock",
     remove: () => {
       if (timer) clearTimeout(timer);
-      if (blinkTimer) clearInterval(blinkTimer);
+      stopBlink();
       Bangle.removeListener('lcdPower', onLcd);
+      Bangle.removeListener('lock', onLock);
     }
   });
 }
