@@ -316,6 +316,37 @@
     }, 30);
   }
 
+  // ======== widget bar reveal (swipe down / up) ========
+  let widsVisible = false, widTimer;
+
+  function redrawTop() {
+    g.setColor(C_DIAL).fillRect(0, 0, 175, 23);
+    g.setColor(C_RIB);
+    for (let y = 3; y < 24; y += 4) g.drawLine(0, y, 175, y);
+    drawPodChrome(PODS[0]);
+    drawPodChrome(PODS[1]);
+    drawOdoChrome();
+    lastVals = [null, null]; lastNdl = [null, null]; lastSteps = null;
+    updatePods();
+  }
+
+  function reveal() {
+    if (widsVisible) return;
+    widsVisible = true;
+    require("widget_utils").show();
+    Bangle.drawWidgets();
+    const ms = (typeof cfg.peek === "number") ? cfg.peek : 2000;
+    if (ms > 0) widTimer = setTimeout(dismiss, ms);
+  }
+
+  function dismiss() {
+    if (widTimer) { clearTimeout(widTimer); widTimer = undefined; }
+    if (!widsVisible) return;
+    widsVisible = false;
+    require("widget_utils").hide();
+    redrawTop();
+  }
+
   // ======== touch + swipe controls ========
   function tripToggle() {
     odoMode = 1 - odoMode;
@@ -337,7 +368,14 @@
   }
 
   function onSwipe(lr, ud) {
-    if (ud || !lr) return;    // down is widget reveal; up unused
+    if (ud > 0) return reveal();
+    if (ud < 0) return dismiss();
+    if (!lr) return;
+    if (widsVisible) {          // fullDraw repaints the top anyway
+      if (widTimer) { clearTimeout(widTimer); widTimer = undefined; }
+      require("widget_utils").hide();
+      widsVisible = false;
+    }
     cfg.theme = ((cfg.theme || 0) + lr + THEMES.length) % THEMES.length;
     saveCfg();
     applyTheme();
@@ -383,15 +421,6 @@
 
   applyTheme();
   g.clear();
-  require("widget_utils").swipeOn(
-    (typeof cfg.peek === "number") ? cfg.peek : 2000);
-  fullDraw();
-  queueDraw();
-  Bangle.on('lcdPower', onLcd);
-  Bangle.on('charging', onCharge);
-  Bangle.on('touch', onTouch);
-  Bangle.on('swipe', onSwipe);
-  Bangle.on('HRM', onHRM);
 
   Bangle.setUI({
     mode: "clock",
@@ -400,6 +429,7 @@
       if (anim) clearInterval(anim);
       if (demoTimer) clearTimeout(demoTimer);
       if (peekTimer) clearTimeout(peekTimer);
+      if (widTimer) clearTimeout(widTimer);
       stopHRM(false);                      // powers the sensor down
       Bangle.removeListener('lcdPower', onLcd);
       Bangle.removeListener('charging', onCharge);
@@ -409,5 +439,16 @@
       require("widget_utils").show();
     }
   });
+
   Bangle.loadWidgets();
+  Bangle.drawWidgets();              // lay widgets out once (sets their x/y)
+  require("widget_utils").hide();    // then stub their draws: nothing can
+                                     // repaint the bar behind our back
+  fullDraw();
+  queueDraw();
+  Bangle.on('lcdPower', onLcd);
+  Bangle.on('charging', onCharge);
+  Bangle.on('touch', onTouch);
+  Bangle.on('swipe', onSwipe);
+  Bangle.on('HRM', onHRM);
 }
