@@ -1,0 +1,35 @@
+{
+  "id": "retrogauge",
+  "name": "Retro Gauge Clock",
+  "shortName": "RetroGauge",
+  "version": "0.07",
+  "author": "stevie",
+  "description": "A jump-hour, retrograde-minute clock face inspired by vintage car dashboards. The minute needle sweeps a 0-60 gauge, then flies back to zero as the hour numeral jumps.",
+  "icon": "app.png",
+  "type": "clock",
+  "tags": "clock",
+  "supports": [
+    "BANGLEJS2"
+  ],
+  "allow_emulator": true,
+  "storage": [
+    {
+      "name": "retrogauge.app.js",
+      "url": "app.js"
+    },
+    {
+      "name": "retrogauge.img",
+      "url": "app-icon.js",
+      "evaluate": true
+    },
+    {
+      "name": "retrogauge.settings.js",
+      "url": "settings.js"
+    }
+  ],
+  "data": [
+    {
+      "name": "retrogauge.json"
+    }
+  ]
+}

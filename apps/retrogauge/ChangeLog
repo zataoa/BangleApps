@@ -1,0 +1,7 @@
+0.01: New App!
+0.02: Redesign: ribbed dial, recessed fan aperture, plate-clipped needle, circular jump-hour window
+0.03: Widgets hidden by default, swipe down to reveal; face now uses the full screen
+0.04: Instrument cluster: FUEL(battery) and BPM(heart) pods, STEPS odometer; removed MIN label
+0.05: Cluster raised clear of the main gauge; odometer crowns the arc; pod layout now pivot-relative
+0.06: Settings page with 5 selectable themes
+0.07: Touch controls: date peek, live HR, trip odometer, theme swipe, flyback demo; settings for all persisted options
