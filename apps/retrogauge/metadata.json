@@ -2,7 +2,7 @@
   "id": "retrogauge",
   "name": "Retro Gauge Clock",
   "shortName": "RetroGauge",
-  "version": "0.08",
+  "version": "0.09",
   "author": "stevie",
   "description": "A jump-hour, retrograde-minute clock face inspired by vintage car dashboards. The minute needle sweeps a 0-60 gauge, then flies back to zero as the hour numeral jumps.",
   "icon": "app.png",

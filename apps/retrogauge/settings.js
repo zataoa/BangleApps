@@ -8,6 +8,7 @@
   if (typeof s.peek !== "number") s.peek = 2000;
   if (typeof s.fly !== "boolean") s.fly = true;
   if (typeof s.buzz !== "boolean") s.buzz = false;
+  if (typeof s.baro !== "boolean") s.baro = true;
   function save(k, v) {
     s[k] = v;
     require('Storage').writeJSON('retrogauge.json', s);
@@ -31,6 +32,7 @@
       onchange: v => save("peek", peeks[v])
     },
     "Flyback anim": { value: s.fly, onchange: v => save("fly", v) },
-    "Hour buzz":    { value: s.buzz, onchange: v => save("buzz", v) }
+    "Hour buzz":    { value: s.buzz, onchange: v => save("buzz", v) },
+    "Pressure trend": { value: s.baro, onchange: v => save("baro", v) }
   });
 })

@@ -1,6 +1,7 @@
 {
-  // Retro Gauge Clock v0.07
-  // Retrograde minutes + jump hour, dashboard cluster, touch controls.
+  // Retro Gauge Clock v0.09
+  // Retrograde minutes + jump hour, dashboard cluster, touch controls,
+  // pressure-trend chevrons.
   const locale = require("locale");
 
   // ---- persisted settings (see settings.js) ----
@@ -28,6 +29,8 @@
   const R_FAN = 120, R_T1 = 102, R_NUM = 90, R_TIP = 84;
   const PANEL_Y = 127;
   const HCX = 88, HCY = 151, HR = 22;
+  const CHV_L = { x: 40, y: 151, dir: -1 };   // left cluster: FALLING
+  const CHV_R = { x: 136, y: 151, dir: 1 };   // right cluster: RISING
 
   // ---- mini pods + odometer ----
   const PODS = [
@@ -41,6 +44,8 @@
   let lastVals = [null, null], lastNdl = [null, null], lastSteps = null;
   let odoMode = cfg.odo ? 1 : 0;
   let timer, anim, demoTimer, peekTimer, hrmTimeout, hrmOn = false;
+  let trend = (typeof cfg.trend === "number") ? cfg.trend : 0;  // -1/0/1
+  let baroTimer, chevBlink, locked = false;
 
   function pt(a, r) {
     const rad = a * Math.PI / 180;
@@ -60,6 +65,47 @@
       bx - px, by - py,
       CX + R_TIP * dx, CY + R_TIP * dy
     ]);
+  }
+
+  // ======== pressure-trend chevrons ========
+  // Each cluster is three ">"-shaped chevrons stacked toward HCX. `lit`
+  // draws them in the highlight colour; unlit draws them dim (background
+  // fan colour outline only) so an inactive cluster reads as "off".
+  function drawChevrons(cluster, lit) {
+    const col = lit ? C_CHG : C_FAN;
+    const s = cluster.dir;   // -1 = point left, 1 = point right
+    for (let i = 0; i < 3; i++) {
+      const x = cluster.x + s * i * 10;
+      g.setColor(col).drawLine(x, cluster.y - 8, x + s * 8, cluster.y)
+       .drawLine(x, cluster.y + 8, x + s * 8, cluster.y);
+      if (lit) g.drawLine(x, cluster.y - 7, x + s * 7, cluster.y)
+                .drawLine(x, cluster.y + 7, x + s * 7, cluster.y);
+    }
+  }
+
+  function drawTrend() {
+    drawChevrons(CHV_L, trend < 0);
+    drawChevrons(CHV_R, trend > 0);
+  }
+
+  // Flash the newly-active cluster a few times, then hold steady lit.
+  // Skipped entirely while locked -- a locked screen only ever gets the
+  // final static state, never a running animation.
+  function animateTrend(newTrend) {
+    const cluster = newTrend < 0 ? CHV_L : CHV_R;
+    if (locked || newTrend === 0) { trend = newTrend; drawTrend(); return; }
+    if (chevBlink) clearInterval(chevBlink);
+    let n = 0, on = false;
+    chevBlink = setInterval(() => {
+      drawChevrons(cluster, on);
+      on = !on;
+      if (++n >= 6) {
+        clearInterval(chevBlink);
+        chevBlink = undefined;
+        trend = newTrend;
+        drawTrend();
+      }
+    }, 250);
   }
 
   // ======== mini pods ========
@@ -178,6 +224,36 @@
     }
   }
 
+  // ======== barometric pressure trend ========
+  // Wakes the barometer briefly every 15 min, compares against a reading
+  // from roughly an hour ago, then sleeps it again -- same low-duty-cycle
+  // pattern as the HRM, just on a much slower clock.
+  function onPressure(d) {
+    Bangle.removeListener('pressure', onPressure);
+    Bangle.setBarometerPower(0, "retrogauge");
+    if (!d || !d.pressure) return;
+    const now = Date.now();
+    const prev = cfg.baroPrev;
+    if (prev && (now - prev.t) >= 45 * 60000) {
+      const delta = d.pressure - prev.p;
+      const nt = (delta > 0.5) ? 1 : (delta < -0.5) ? -1 : 0;
+      if (nt !== trend) animateTrend(nt);
+    }
+    if (!prev || (now - prev.t) >= 60 * 60000) {
+      cfg.baroPrev = { p: d.pressure, t: now };
+      cfg.trend = trend;
+      saveCfg();
+    }
+  }
+
+  function sampleBaro() {
+    if (cfg.baro === false) return;
+    try {
+      Bangle.setBarometerPower(1, "retrogauge");
+      Bangle.on('pressure', onPressure);
+    } catch (e) {}
+  }
+
   // ======== on-demand live heart rate (tap BPM pod) ========
   function liveHRM() {
     if (hrmOn) return stopHRM(true);
@@ -241,6 +317,7 @@
   // ======== lower plate + jump hour ========
   function drawHour(now) {
     g.setColor(C_FAN).fillRect(0, PANEL_Y, 175, 175);
+    drawTrend();
     g.setColor(C_SCALE).drawCircle(HCX, HCY, HR).drawCircle(HCX, HCY, HR + 1);
     g.setColor(C_DISC).fillCircle(HCX, HCY, HR - 3);
     const hStr = locale.time(now, 1).split(":")[0].trim();
@@ -418,6 +495,14 @@
 
   function onLcd(on) { if (on) fullDraw(); }
   function onCharge() { updatePods(); }
+  function onLock(isLocked) {
+    locked = isLocked;
+    if (locked && chevBlink) {         // freeze mid-flash -> final state
+      clearInterval(chevBlink);
+      chevBlink = undefined;
+      drawTrend();
+    }
+  }
 
   applyTheme();
   g.clear();
@@ -430,6 +515,11 @@
       if (demoTimer) clearTimeout(demoTimer);
       if (peekTimer) clearTimeout(peekTimer);
       if (widTimer) clearTimeout(widTimer);
+      if (baroTimer) clearInterval(baroTimer);
+      if (chevBlink) clearInterval(chevBlink);
+      Bangle.setBarometerPower(0, "retrogauge");
+      Bangle.removeListener('pressure', onPressure);
+      Bangle.removeListener('lock', onLock);
       stopHRM(false);                      // powers the sensor down
       Bangle.removeListener('lcdPower', onLcd);
       Bangle.removeListener('charging', onCharge);
@@ -451,4 +541,7 @@
   Bangle.on('touch', onTouch);
   Bangle.on('swipe', onSwipe);
   Bangle.on('HRM', onHRM);
+  Bangle.on('lock', onLock);
+  setTimeout(sampleBaro, 5000);              // first sample shortly after boot
+  baroTimer = setInterval(sampleBaro, 15 * 60000);
 }

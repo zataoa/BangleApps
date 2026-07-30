@@ -6,3 +6,4 @@
 0.06: Settings page with 5 selectable themes
 0.07: Touch controls: date peek, live HR, trip odometer, theme swipe, flyback demo; settings for all persisted options
 0.08: Fix widget bar reappearing on lock and stuck overlay on swipe: replaced overlay swipeOn with deterministic hide/show reveal
+0.09: Pressure-trend chevrons flanking the hour disc (barometer sampled every 15 min); animation only runs while unlocked. New "Pressure trend" setting.
