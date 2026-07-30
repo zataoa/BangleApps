@@ -1,5 +1,5 @@
 {
-  // Retro Gauge Clock v0.09
+  // Retro Gauge Clock v0.10
   // Retrograde minutes + jump hour, dashboard cluster, touch controls,
   // pressure-trend chevrons.
   const locale = require("locale");
@@ -10,17 +10,18 @@
 
   // ---- themes (safe 3-bit palette) ----
   const THEMES = [
-    { DIAL:0x07FF, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0x07FF, HOUR:0x0000 }, // Mint
-    { DIAL:0xFFFF, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0xFFFF, HOUR:0x0000 }, // Silver
-    { DIAL:0x0000, RIB:0x001F, FAN:0x0000, SCALE:0xFFFF, NDL:0xFFE0, CHG:0x07E0, DISC:0xFFFF, HOUR:0x0000 }, // Midnight
-    { DIAL:0x001F, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0x001F, HOUR:0xFFFF }, // Navy
-    { DIAL:0xF800, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xFFE0, CHG:0x07E0, DISC:0xF800, HOUR:0xFFFF }  // Red
+    { DIAL:0x07FF, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0x07FF, HOUR:0x0000, DIM:0x001F }, // Mint
+    { DIAL:0xFFFF, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0xFFFF, HOUR:0x0000, DIM:0x001F }, // Silver
+    { DIAL:0x0000, RIB:0x001F, FAN:0x0000, SCALE:0xFFFF, NDL:0xFFE0, CHG:0x07E0, DISC:0xFFFF, HOUR:0x0000, DIM:0x001F }, // Midnight
+    { DIAL:0x001F, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0x001F, HOUR:0xFFFF, DIM:0x07FF }, // Navy
+    { DIAL:0xF800, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xFFE0, CHG:0x07E0, DISC:0xF800, HOUR:0xFFFF, DIM:0x001F }  // Red
   ];
-  let C_DIAL, C_RIB, C_FAN, C_SCALE, C_NDL, C_CHG, C_DISC, C_HOUR;
+  let C_DIAL, C_RIB, C_FAN, C_SCALE, C_NDL, C_CHG, C_DISC, C_HOUR, C_DIM;
   function applyTheme() {
     const T = THEMES[(cfg.theme || 0) % THEMES.length];
     C_DIAL = T.DIAL; C_RIB = T.RIB; C_FAN = T.FAN; C_SCALE = T.SCALE;
     C_NDL = T.NDL; C_CHG = T.CHG; C_DISC = T.DISC; C_HOUR = T.HOUR;
+    C_DIM = T.DIM;
   }
 
   // ---- main gauge geometry ----
@@ -72,7 +73,14 @@
   // draws them in the highlight colour; unlit draws them dim (background
   // fan colour outline only) so an inactive cluster reads as "off".
   function drawChevrons(cluster, lit) {
-    const col = lit ? C_CHG : C_FAN;
+    // erase first so a lit->unlit transition doesn't leave bold strokes
+    const s0 = cluster.dir;
+    g.setColor(C_FAN).fillRect(
+      Math.min(cluster.x - 2, cluster.x + s0 * 29),
+      cluster.y - 9,
+      Math.max(cluster.x + 2, cluster.x + s0 * 29),
+      cluster.y + 9);
+    const col = lit ? C_CHG : C_DIM;
     const s = cluster.dir;   // -1 = point left, 1 = point right
     for (let i = 0; i < 3; i++) {
       const x = cluster.x + s * i * 10;
