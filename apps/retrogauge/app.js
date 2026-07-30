@@ -1,5 +1,5 @@
 {
-  // Retro Gauge Clock v0.10
+  // Retro Gauge Clock v0.11
   // Retrograde minutes + jump hour, dashboard cluster, touch controls,
   // pressure-trend chevrons.
   const locale = require("locale");
@@ -16,12 +16,11 @@
     { DIAL:0x001F, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xF800, CHG:0xFFE0, DISC:0x001F, HOUR:0xFFFF, DIM:0x07FF }, // Navy
     { DIAL:0xF800, RIB:0x0000, FAN:0x0000, SCALE:0xFFFF, NDL:0xFFE0, CHG:0x07E0, DISC:0xF800, HOUR:0xFFFF, DIM:0x001F }  // Red
   ];
-  let C_DIAL, C_RIB, C_FAN, C_SCALE, C_NDL, C_CHG, C_DISC, C_HOUR, C_DIM;
+  let C_DIAL, C_RIB, C_FAN, C_SCALE, C_NDL, C_CHG, C_DISC, C_HOUR;
   function applyTheme() {
     const T = THEMES[(cfg.theme || 0) % THEMES.length];
     C_DIAL = T.DIAL; C_RIB = T.RIB; C_FAN = T.FAN; C_SCALE = T.SCALE;
     C_NDL = T.NDL; C_CHG = T.CHG; C_DISC = T.DISC; C_HOUR = T.HOUR;
-    C_DIM = T.DIM;
   }
 
   // ---- main gauge geometry ----
@@ -73,21 +72,23 @@
   // draws them in the highlight colour; unlit draws them dim (background
   // fan colour outline only) so an inactive cluster reads as "off".
   function drawChevrons(cluster, lit) {
-    // erase first so a lit->unlit transition doesn't leave bold strokes
-    const s0 = cluster.dir;
-    g.setColor(C_FAN).fillRect(
-      Math.min(cluster.x - 2, cluster.x + s0 * 29),
-      cluster.y - 9,
-      Math.max(cluster.x + 2, cluster.x + s0 * 29),
-      cluster.y + 9);
-    const col = lit ? C_CHG : C_DIM;
     const s = cluster.dir;   // -1 = point left, 1 = point right
+    // clear the zone so lit->unlit transitions leave no bold residue
+    g.setColor(C_FAN).fillRect(
+      Math.min(cluster.x - 4, cluster.x + s * 32),
+      cluster.y - 9,
+      Math.max(cluster.x + 4, cluster.x + s * 32),
+      cluster.y + 9);
+    // unlit: thin white engraving (always visible, like the plate rings)
+    // lit:   thick yellow strokes -- differs in BOTH colour and weight
+    g.setColor(lit ? C_CHG : C_SCALE);
+    const t = lit ? 4 : 1;
     for (let i = 0; i < 3; i++) {
       const x = cluster.x + s * i * 10;
-      g.setColor(col).drawLine(x, cluster.y - 8, x + s * 8, cluster.y)
-       .drawLine(x, cluster.y + 8, x + s * 8, cluster.y);
-      if (lit) g.drawLine(x, cluster.y - 7, x + s * 7, cluster.y)
-                .drawLine(x, cluster.y + 7, x + s * 7, cluster.y);
+      for (let o = 0; o < t; o++) {
+        g.drawLine(x + s * o, cluster.y - 8, x + s * (8 + o), cluster.y)
+         .drawLine(x + s * o, cluster.y + 8, x + s * (8 + o), cluster.y);
+      }
     }
   }
 
